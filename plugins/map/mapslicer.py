@@ -4,7 +4,7 @@ from __future__ import division
 import dric
 import dric.support
 from logging import getLogger
-from os import listdir, mkdir
+from os import listdir, mkdir, makedirs, path
 from os.path import join, split, splitext, exists, abspath, basename
 from shutil import rmtree
 from builtins import range
@@ -24,16 +24,22 @@ _logger = getLogger('dric.mapslicer')
 class MapSlicerPlugin(dric.Plugin):
     def setup(self, eventbus):
         if(self.config['invoke'] != 'NEVER'):
-            for file in listdir(self.get_source_dir()):
+            for map_dir in listdir(self.get_source_dir()):
+
+                # check that map_dir is a directory; if it's a file, skip
+                if(not path.isdir(path.join(self.get_source_dir(), map_dir))):
+                    _logger.warning('Skipping %s; images should be placed in separate folders', map_dir)
+                    continue;
+
                 # get destination dir
-                dest_dir = self.get_dest_dir(file)
-                
+                dest_dir = self.get_dest_dir(map_dir)
+
                 # if destination dir does not exists, creates it
                 if (exists(dest_dir) is False):
                     _logger.debug('MKDIR %s', dest_dir)
-                    mkdir(dest_dir)
+                    makedirs(dest_dir)
                 
-                source_dir = join(self.get_source_dir(), file)
+                source_dir = join(self.get_source_dir(), map_dir)
 
                 source_file, file_info = self.open_source_directory(source_dir);
                 
@@ -58,8 +64,9 @@ class MapSlicerPlugin(dric.Plugin):
         the file is ignore. 
         """
 
-        if('ignore' in file_info and file_info['ignore'] is True):
+        if(file_info is not None and 'ignore' in file_info and file_info['ignore'] is True):
             _logger.info('Ignoring %s', source_file)
+            return
 
         _logger.info('Slicing %s', source_file)
         
